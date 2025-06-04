@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, r2_score
 import joblib
+from datetime import datetime
 
 # ------------------------------
 # LSTM Model
@@ -109,12 +110,13 @@ with col1:
             preds_inv = y_scaler.inverse_transform(preds)
             actual_inv = y_scaler.inverse_transform(y_test.numpy())
 
-            st.session_state.model = model
+            st.session_state.trained_model = model
             st.session_state.x_scaler = x_scaler
             st.session_state.y_scaler = y_scaler
             st.session_state.sequence_length = sequence_length
             st.session_state.forecast_horizon = forecast_horizon
             st.session_state.input_columns = input_columns
+            st.session_state.trained_model_ready = True
 
             with col2:
                 fig1, ax1 = plt.subplots()
@@ -132,20 +134,6 @@ with col1:
                 st.write(f"**MSE:** {mean_squared_error(actual_inv, preds_inv):.4f}")
                 st.write(f"**R² Score:** {r2_score(actual_inv, preds_inv):.4f}")
 
-                # Save logic using trigger and rerun
-                if "save_model_trigger" not in st.session_state:
-                    st.session_state.save_model_trigger = False
-
-                if st.session_state.get("model") and st.button("Save Trained Model"):
-                    st.session_state.save_model_trigger = True
-                    st.rerun()
-
-                if st.session_state.save_model_trigger:
-                    torch.save(st.session_state.model.state_dict(), "lstm_model.pt")
-                    joblib.dump((st.session_state.x_scaler, st.session_state.y_scaler), "scalers.pkl")
-                    st.success("✅ Model and scalers saved as 'lstm_model.pt' and 'scalers.pkl'")
-                    st.session_state.save_model_trigger = False
-
     else:
         model_file = st.file_uploader("Upload Model (.pt)", type=["pt"])
         scaler_file = st.file_uploader("Upload Scalers (.pkl)", type=["pkl"])
@@ -161,13 +149,26 @@ with col1:
 
             x_scaler, y_scaler = joblib.load(scaler_file)
 
-            st.session_state.model = model
+            st.session_state.trained_model = model
             st.session_state.x_scaler = x_scaler
             st.session_state.y_scaler = y_scaler
             st.session_state.sequence_length = sequence_length
             st.session_state.forecast_horizon = forecast_horizon
             st.session_state.input_columns = input_cols
+            st.session_state.trained_model_ready = True
             st.success("Pretrained model and scalers loaded.")
+
+# --- Save/Download After Training ---
+if st.session_state.get("trained_model_ready", False):
+    default_name = f"lstm_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    save_name = st.text_input("📅 Save trained model as (no extension):", default_name)
+
+    if st.button("Save Trained Model"):
+        model_path = f"{save_name}.pt"
+        scaler_path = "scalers.pkl"
+        torch.save(st.session_state.trained_model.state_dict(), model_path)
+        joblib.dump((st.session_state.x_scaler, st.session_state.y_scaler), scaler_path)
+        st.success(f"✅ Model saved as {model_path} and {scaler_path}")
 
 # ------------------------------
 # Validation Panel
@@ -175,7 +176,7 @@ with col1:
 with col2:
     st.header("🔎 Validate Model")
 
-    if "model" in st.session_state:
+    if st.session_state.get("trained_model"):
         method = st.radio("Validation Input", ["Manual Entry", "Upload Excel"])
 
         if method == "Manual Entry":
@@ -192,7 +193,7 @@ with col2:
                         seq_scaled = st.session_state.x_scaler.transform(seq)
                         x_tensor = torch.tensor(seq_scaled.reshape(1, st.session_state.sequence_length, -1), dtype=torch.float32)
                         with torch.no_grad():
-                            pred = st.session_state.model(x_tensor).numpy()
+                            pred = st.session_state.trained_model(x_tensor).numpy()
                         pred_inv = st.session_state.y_scaler.inverse_transform(pred)
                         st.success(f"Prediction (next {st.session_state.forecast_horizon} steps): {pred_inv.flatten()}")
                 except Exception as e:
@@ -211,7 +212,7 @@ with col2:
                         seq_scaled = st.session_state.x_scaler.transform(seq)
                         x_tensor = torch.tensor(seq_scaled.reshape(1, st.session_state.sequence_length, -1), dtype=torch.float32)
                         with torch.no_grad():
-                            pred = st.session_state.model(x_tensor).numpy()
+                            pred = st.session_state.trained_model(x_tensor).numpy()
                         pred_inv = st.session_state.y_scaler.inverse_transform(pred)
                         st.success(f"Prediction (next {st.session_state.forecast_horizon} steps): {pred_inv.flatten()}")
                 except Exception as e:
