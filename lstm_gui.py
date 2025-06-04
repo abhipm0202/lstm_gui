@@ -132,11 +132,22 @@ with col1:
                 st.write(f"**MSE:** {mean_squared_error(actual_inv, preds_inv):.4f}")
                 st.write(f"**R² Score:** {r2_score(actual_inv, preds_inv):.4f}")
 
-                if st.session_state.get("model") and st.button("Save Trained Model"):
+                # Initialize save trigger in session state
+                if "save_trigger" not in st.session_state:
+                    st.session_state.save_trigger = False
+
+                # Button: Set the trigger
+                if st.button("Save Trained Model"):
+                    st.session_state.save_trigger = True
+
+                # Separate block: Execute saving on rerun
+                if st.session_state.save_trigger and st.session_state.get("model"):
                     torch.save(st.session_state.model.state_dict(), "lstm_model.pt")
                     joblib.dump((st.session_state.x_scaler, st.session_state.y_scaler), "scalers.pkl")
                     st.success("✅ Model and scalers saved as 'lstm_model.pt' and 'scalers.pkl'")
+                    st.session_state.save_trigger = False  # reset
 
+                
 
     else:
         model_file = st.file_uploader("Upload Model (.pt)", type=["pt"])
