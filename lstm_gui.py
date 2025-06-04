@@ -132,10 +132,11 @@ with col1:
                 st.write(f"**MSE:** {mean_squared_error(actual_inv, preds_inv):.4f}")
                 st.write(f"**R² Score:** {r2_score(actual_inv, preds_inv):.4f}")
 
-                if st.button("Save Trained Model"):
-                    torch.save(model.state_dict(), "lstm_model.pt")
-                    joblib.dump((x_scaler, y_scaler), "scalers.pkl")
-                    st.success("Model and scalers saved.")
+                if st.session_state.get("model") and st.button("Save Trained Model"):
+                    torch.save(st.session_state.model.state_dict(), "lstm_model.pt")
+                    joblib.dump((st.session_state.x_scaler, st.session_state.y_scaler), "scalers.pkl")
+                    st.success("✅ Model and scalers saved as 'lstm_model.pt' and 'scalers.pkl'")
+
 
     else:
         model_file = st.file_uploader("Upload Model (.pt)", type=["pt"])
