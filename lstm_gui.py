@@ -159,16 +159,40 @@ with col1:
             st.success("Pretrained model and scalers loaded.")
 
 # --- Save/Download After Training ---
+from datetime import datetime
+import io
+
+# --- Save Model Block (Outside col2) ---
 if st.session_state.get("trained_model_ready", False):
     default_name = f"lstm_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    save_name = st.text_input("📅 Save trained model as (no extension):", default_name)
+    save_name = st.text_input("💾 Save trained model as (no extension):", default_name)
 
     if st.button("Save Trained Model"):
         model_path = f"{save_name}.pt"
         scaler_path = "scalers.pkl"
         torch.save(st.session_state.trained_model.state_dict(), model_path)
         joblib.dump((st.session_state.x_scaler, st.session_state.y_scaler), scaler_path)
+        st.session_state.model_path = model_path
+        st.session_state.scaler_path = scaler_path
+        st.session_state.model_saved = True
         st.success(f"✅ Model saved as {model_path} and {scaler_path}")
+
+    if st.session_state.get("model_saved", False):
+        with open(st.session_state.model_path, "rb") as f:
+            st.download_button(
+                label="📥 Download Trained Model",
+                data=f,
+                file_name=st.session_state.model_path,
+                mime="application/octet-stream"
+            )
+        with open(st.session_state.scaler_path, "rb") as f:
+            st.download_button(
+                label="📥 Download Scalers",
+                data=f,
+                file_name=st.session_state.scaler_path,
+                mime="application/octet-stream"
+            )
+
 
 # ------------------------------
 # Validation Panel
