@@ -96,7 +96,7 @@ with st.sidebar:
 
             model.eval()
             with torch.no_grad():
-                pred_y = model(X_test.unsqueeze(-1)).numpy()
+                pred_y = model(X_test).detach().numpy()
 
             actual_y = y_test.numpy()
             pred_y_rescaled = scaler.inverse_transform(pred_y)
