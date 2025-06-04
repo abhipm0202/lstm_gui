@@ -88,7 +88,7 @@ with st.sidebar:
             for epoch in range(epochs):
                 model.train()
                 optimizer.zero_grad()
-                output = model(X_train.unsqueeze(-1))
+                output = model(X_train)
                 loss = criterion(output, y_train)
                 loss.backward()
                 optimizer.step()
